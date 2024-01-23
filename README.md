@@ -1,7 +1,13 @@
 # PortTokenizer
 This repository has `portTok.py` program, a tokenizer for Portuguese text using Universal Dependencies (UD) format (CoNLL-U) to store the tokenized sentences.
 
-This program receives as input a single textual file with the sentences, one per line, and generates a `.conllu` file with all sentences tokenized according to the CoNLL-U format. For example, if the following sentences are the input of the tokenizer:
+This program receives as input a single textual file with the sentences, one per line, and generates a `.conllu` file with all sentences tokenized according to the CoNLL-U format.
+
+The tokenization process performs usual tokenization tasks, as dealing with punctuations, but also performs the decomposition of contracted words (e.g. `da` is decontracted into `de`+ `a`), enclisis (e.g. `dizer-nos` is decomposed into `dizer`+`nos`), and mesoclisis (`ajudar-nos-ia` is decomposed into `ajudaria`+ `nos`), while the original form is kept in the CoNLL-U as a contracted token (see exemplo below).
+
+Another important feature of the tokenizer is the heuristic to disambiguate word forms that can either be a contracted word or not, as is the case of the pronoun `nos` and the contracted `em`+`os`, but also the forms `consigo` and `com`+`si`, `pelo` and `por`+`o`, `pelos` and `por`+`os`, `pela` and `por`+`a`, `pelas` and `por`+`as`, and finally the case of `pra` that can either be an abbreviated form of `para` or `para`+`a`. To perform these disambiguations the tokenizer uses the PortiLexicon-UD, a Portuguese lexikon to examine the possible classes of neighboring words of the disambiguation candididates. An exemple of disambiguation is shown below in sentence examples that have one time the form `nos` employed as a pronoun and another time employed as the contracted preposition and determiner `em`+`o` (see below).
+
+For example, if the following sentences are the input of the tokenizer:
 
 `A rua Dr. Flores é uma rua da cidade de Porto Alegre?`
 
@@ -11,7 +17,7 @@ This program receives as input a single textual file with the sentences, one per
 
 The follwing CoNLL-U will be generated:
 
-![conllu1](https://github.com/LuceleneL/portTokenizer/assets/81653183/6e78182d-062e-4a27-83fe-96e9623248d2)
+![conllu1](https://github.com/LuceleneL/portTokenizer/assets/81653183/45190e19-ecf1-451d-b7f2-f5dab7affeeb)
 ![conllu2](https://github.com/LuceleneL/portTokenizer/assets/81653183/d067587e-fa0d-4531-bbe5-178dcaf4ba5e)
 ![conllu3](https://github.com/LuceleneL/portTokenizer/assets/81653183/8a4bc06d-dcc4-4b5e-837c-d70993d7640b)
 
