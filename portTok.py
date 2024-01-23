@@ -474,7 +474,7 @@ def desambIt(token, bits, i, lastField, s, SID, tokens):
 #############################################################################
 def tokenizeIt(s, SID, outfile):
     removable = ["'", '"', "(", ")", "[", "]", "{", "}", "<", ">", \
-                 ".", "!", "?", ",", ";", ":", "=", "+", "*", "★", "|", "/", "\\", \
+                 "!", "?", ",", ";", ":", "=", "+", "*", "★", "|", "/", "\\", \
                  "&", "^", "_", "`", "'", "~", "%"]
     ignored   = ["@", "#"]
     digits  = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
@@ -713,7 +713,8 @@ def dealWith(outfile, sent, SID, match, trim):
 #################################################
 def portTok():
     if (len(sys.argv) == 1):
-        arguments = ["sents.conllu", "sents.txt", True, True, "S0000"]
+        arguments = ["lix.conllu", "sents2.txt", True, True, "S0000"]
+#        arguments = ["sents.conllu", "sents.txt", True, True, "S0000"]
         print("Assumindo default: 'sents.conllu' como arquivo de saída, 'sents.txt' como arquivo de entrada, correções, remoções e S0000 como sid.")
     else:
         arguments = parseOptions(sys.argv)
