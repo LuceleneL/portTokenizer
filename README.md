@@ -1,4 +1,4 @@
-# PortTokenizer
+# portTokenizer
 This repository has `portTok.py` program, a tokenizer for Portuguese text using Universal Dependencies (UD) format (CoNLL-U) to store the tokenized sentences.
 
 This program receives as input a single textual file with the sentences, one per line, and generates a `.conllu` file with all sentences tokenized according to the CoNLL-U format.
