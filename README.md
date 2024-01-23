@@ -1,10 +1,40 @@
 # PortTokenizer
- This repository has portTok.py program, a tokenizer for Portuguese text using Universal Dependencies (UD) format (CoNLL-U) to store the tokenized sentences.
+This repository has `portTok.py` program, a tokenizer for Portuguese text using Universal Dependencies (UD) format (CoNLL-U) to store the tokenized sentences.
+
+This program receives as input a single textual file with the sentences, one per line, and generates a `.conllu` file with all sentences tokenized according to the CoNLL-U format. For example, if the following sentences are the input of the tokenizer:
+
+`A rua Dr. Flores é uma rua da cidade de Porto Alegre?`
+
+`Provavelmente, 90% dos gaúchos vai dizer-nos que sim.`
+
+`Até os que não moram nos bairros de Porto Alegre.`
+
+The follwing CoNLL-U will be generated:
+
+![conllu1](https://github.com/LuceleneL/portTokenizer/assets/81653183/6e78182d-062e-4a27-83fe-96e9623248d2)
+![conllu2](https://github.com/LuceleneL/portTokenizer/assets/81653183/d067587e-fa0d-4531-bbe5-178dcaf4ba5e)
+![conllu3](https://github.com/LuceleneL/portTokenizer/assets/81653183/8a4bc06d-dcc4-4b5e-837c-d70993d7640b)
+
+This program also performs, optionally, a verification of the matching punctuations (quotation marks, parenthesis, brackets, curly braces) eventually removing missing pairs.
+
+Another option available is the removal of uppercased preambules in sentences, usually found as headlines in jornalistic texts, as for example the sentence:
+
+`A CRONOLOGIA Governo concede visto de permanência a Battisti em 2015.`
+
+Where the words `A CRONOLOGIA` is not a part of the sentence, and therefore the sentence can be trimmed by the removal of the headline words.
+
+Another option available in the program is the definition of a model for the sentence identifier (SID) to be used in the produced CoNLL-U. For example if the model `S0000` is given, the sentences will be numbered as `S0001`, `S0002`, and so on.
+
+## Usage example
+`python3 portTok -o sents.conllu -m -t -s S0000 sents.txt`
+
+This command fetch the input from files `sents.txt`, it performs the matching of paired punctuations (`-m`), performs the trim of sentence headlines (`-t`), and sets the SID model as `S0000` (`-s S0000`), saving the produced CoNLL-U in the file `sents.conllu` (`-o sents.conllu`).
 
  # Contents
  The main files in this repository are:
 - `README.md` - this read explanatory file;
 - `portTok.py` - the Python 3 program;
+- `abbrev.txt` - list of known abbreviations in Portuguese;
 - `sents.txt` - the input file to be used as example;
 - `sents.conllu` - the output file generated reading the example input file.
 
