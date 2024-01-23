@@ -20,12 +20,12 @@
 #
 # Exemplo de utilização:
 #
-# portTok -o sents.conllu -m -t -s FOLHA_DOC000001_SENT000 sents.txt
+# portTok -o sents.conllu -m -t -s S0000 sents.txt
 #
 # Busca as sentenças no arquivo 'sents.txt',
 #   corrige pontuações casadas (aspas, parenteses, etc),
 #   remove possíveis MANCHETES que precedem as frases,
-#   usa FOLHA_DOC000001_SENT000 como modelo de identificador de sentença e
+#   usa S0000 como modelo de identificador de sentença e
 #   salva as sentenças devidamente tokenizadas no arquivo 'sents.conllu'
 #
 # last edit: 01/21/2024
@@ -52,11 +52,11 @@ def parseOptions(arguments):
                       "-m corrige pontuações casadas (aspas, parenteses, etc)", \
                       "-t remove possíveis MANCHETES que precedem as frases", \
                       "Exemplo de utilização:", \
-                      "portTok -o sents.conllu -m -t -s FOLHA_DOC000001_SENT000 sents.txt", \
+                      "portTok -o sents.conllu -m -t -s S0000 sents.txt", \
                       "Busca as sentenças no arquivo 'sents.txt',", \
                       "  corrige pontuações casadas (aspas, parenteses, etc),", \
                       "  remove possíveis MANCHETES que precedem as frases", \
-                      "  usa FOLHA_DOC000001_SENT000 como modelo de identificador de sentença e"
+                      "  usa S0000 como modelo de identificador de sentença e"
                       "  salva as sentenças devidamente tokenizadas no arquivo 'sents.conllu''", \
                       sep="\n")
                 return None
