@@ -24,6 +24,7 @@ The follwing CoNLL-U will be generated:
 ![conllu2](https://github.com/LuceleneL/portTokenizer/assets/81653183/d067587e-fa0d-4531-bbe5-178dcaf4ba5e)
 ![conllu3](https://github.com/LuceleneL/portTokenizer/assets/81653183/8a4bc06d-dcc4-4b5e-837c-d70993d7640b)
 
+## Program Options
 This program also performs, optionally, a verification of the matching punctuations (quotation marks, parenthesis, brackets, curly braces) eventually removing missing pairs.
 
 Another option available is the removal of uppercased preambules in sentences, usually found as headlines in jornalistic texts, as for example the sentence:
