@@ -7,8 +7,9 @@ The tokenization process performs usual tokenization tasks, as dealing with punc
 
 Another important feature of the tokenizer is the heuristic to disambiguate word forms that can either be a contracted word or not, as is the case of the pronoun `nos` and the contracted preposition and determiner `em`+`os`. The other dealt cases are the forms `consigo` and `com`+`si`, `pelo` and `por`+`o`, `pelos` and `por`+`os`, `pela` and `por`+`a`, `pelas` and `por`+`as`, and finally the case of `pra` that can either be an abbreviated form of `para` or `para`+`a`. To perform these disambiguations the tokenizer uses the PortiLexicon-UD, a Portuguese lexikon to examine the possible classes of neighboring words of the disambiguation candididates. An exemple of disambiguation is shown below in sentence examples that have one time the form `nos` employed as a pronoun and another time employed as the contracted preposition and determiner `em`+`o` (see below).
 
-## Tokenization Example
 This program also consults a list of known abbreviations in Portuguese that is read from the file `abbrev.txt`.
+
+## Tokenization Example
 
 For example, if the following sentences are the input of the tokenizer:
 
