@@ -28,7 +28,7 @@
 #   usa S0000 como modelo de identificador de sentença e
 #   salva as sentenças devidamente tokenizadas no arquivo 'sents.conllu'
 #
-# last edit: 01/21/2024
+# last edit: 04/27/2024
 # created by Lucelene Lopes - lucelene@gmail.com
 
 import sys, os
@@ -571,7 +571,26 @@ def tokenizeIt(s, SID, outfile):
     ambigous = ["nos", "consigo", "pra", "pela", "pelas", "pelo", "pelos"]
 #    ambigous = ["nos", "consigo", "pra", "pelo", "pelos"]
     enclisis = ['me', 'te', 'se', 'lhe', 'o', 'a', 'nos', 'vos', 'lhes', 'os', 'as', 'lo', 'la', 'los', 'las']
-    terminations = ["ia", "ias", "as", "iamos", "ieis", "iam", "ei", "as", "a", "emos", "eis", "ão"]
+    terminations = ["ia", "ias", "as", "iamos", "ieis", "iam", "ei", "as", "a", "emos", "eis", "ão", "á"]
+    abbrev = []
+    infile = open("abbrev.txt", "r")
+    for line in infile:
+        abbrev.append(line[:-1])
+    infile.close()
+    def isAbbrev(chunk, abbrev):
+        abbr = False
+        for a in abbrev:
+            if (chunk == a):
+                abbr = True
+                break
+            else:
+                lasts = -len(a)
+                if (chunk[lasts:] == a) and (not chunk[lasts-1].isalpha()):
+                    abbr = True
+                    break
+        return abbr
+    if (SID[-2:] == "80"):
+        xxxx = 0
     tokens = []
     bits = s.split(" ")
     k = 0
@@ -589,8 +608,10 @@ def tokenizeIt(s, SID, outfile):
         tmp = []
         changed = True
         while (changed) and (len(b) > 1):
+            if (isAbbrev(b, abbrev)):
+                break
             changed = False
-            if (b[-1] in removable+["-"]):
+            if (b[-1] in removable+["-", "."]):
                 tmp.append(b[-1])
                 b = b[:-1]
                 changed = True
@@ -630,19 +651,19 @@ def tokenizeIt(s, SID, outfile):
                 parts = pre+["*^*"+b, buf[0], buf[1]]+pos
         # mesoclisis - type I (e.g. dar-lo-ia)
         elif (len(buf) == 3) and (buf[1] in enclisis) \
-            and (buf[0][-1] == "r") and (buf[3] in [terminations]):
-            parts = pre+["*^*"+b, buf[0]+buf[3], buf[1]]+pos
+            and (buf[0][-1] == "r") and (buf[2] in terminations):
+            parts = pre+["*^*"+b, buf[0]+buf[2], buf[1]]+pos
         # mesoclisis - type II (e.g. dá-lo-ia)
         elif (len(buf) == 3) and (buf[1] in enclisis) \
-            and (buf[0][-1] in ["á", "ê", "í", "ô"]) and (buf[3] in [terminations]):
+            and (buf[0][-1] in ["á", "ê", "í", "ô"]) and (buf[2] in terminations):
             if (buf[0][-1] == "á"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"ar"+buf[3], buf[1]]+pos
+                parts = pre+["*^*"+b, buf[0][:-1]+"ar"+buf[2], buf[1]]+pos
             elif (buf[0][-1] == "ê"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"er"+buf[3], buf[1]]+pos
+                parts = pre+["*^*"+b, buf[0][:-1]+"er"+buf[2], buf[1]]+pos
             elif (buf[0][-1] == "í"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"ir"+buf[3], buf[1]]+pos
+                parts = pre+["*^*"+b, buf[0][:-1]+"ir"+buf[2], buf[1]]+pos
             elif (buf[0][-1] == "ô"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"or"+buf[3], buf[1]]+pos
+                parts = pre+["*^*"+b, buf[0][:-1]+"or"+buf[2], buf[1]]+pos
         else:
             parts = pre+[b]+pos
         # transform parts into tokens to be added
@@ -713,7 +734,7 @@ def dealWith(outfile, sent, SID, match, trim):
 #################################################
 def portTok():
     if (len(sys.argv) == 1):
-        arguments = ["lix.conllu", "sents2.txt", True, True, "S0000"]
+        arguments = ["/Users/pf64/Desktop/RODAV/RODAV_DOC000001.conllu", "/Users/pf64/Desktop/RODAV/DOC000001.txt", True, True, "RODAV_DOC000001_SEN0000"]
 #        arguments = ["sents.conllu", "sents.txt", True, True, "S0000"]
         print("Assumindo default: 'sents.conllu' como arquivo de saída, 'sents.txt' como arquivo de entrada, correções, remoções e S0000 como sid.")
     else:
