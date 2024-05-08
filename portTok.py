@@ -734,8 +734,7 @@ def dealWith(outfile, sent, SID, match, trim):
 #################################################
 def portTok():
     if (len(sys.argv) == 1):
-        arguments = ["/Users/pf64/Desktop/RODAV/RODAV_DOC000001.conllu", "/Users/pf64/Desktop/RODAV/DOC000001.txt", True, True, "RODAV_DOC000001_SEN0000"]
-#        arguments = ["sents.conllu", "sents.txt", True, True, "S0000"]
+        arguments = ["sents.conllu", "sents.txt", True, True, "S0000"]
         print("Assumindo default: 'sents.conllu' como arquivo de saída, 'sents.txt' como arquivo de entrada, correções, remoções e S0000 como sid.")
     else:
         arguments = parseOptions(sys.argv)
