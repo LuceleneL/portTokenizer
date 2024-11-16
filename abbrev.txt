@@ -283,6 +283,9 @@ ART.
 sec.
 Sec.
 SEC.
+inc.
+Inc.
+INC.
 a.
 A.
 b.

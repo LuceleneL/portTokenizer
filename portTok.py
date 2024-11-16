@@ -14,21 +14,23 @@
 #
 # -h help
 # -o output file
+# -p preserve as one token itemizations as a) b) and i) ii)
 # -m matches the paired punctuations
 # -t trims headlines (heuristic)
 # -s sentence id (sid) model
 #
 # Exemplo de utilização:
 #
-# portTok -o sents.conllu -m -t -s S0000 sents.txt
+# portTok -o sents.conllu -p -m -t -s S0000 sents.txt
 #
 # Busca as sentenças no arquivo 'sents.txt',
+#   preserva tokens em itens como a) b) i) ii),
 #   corrige pontuações casadas (aspas, parenteses, etc),
 #   remove possíveis MANCHETES que precedem as frases,
 #   usa S0000 como modelo de identificador de sentença e
 #   salva as sentenças devidamente tokenizadas no arquivo 'sents.conllu'
 #
-# last edit: 04/27/2024
+# last edit: 10/31/2024
 # created by Lucelene Lopes - lucelene@gmail.com
 
 import sys, os
@@ -41,7 +43,7 @@ lex = lexikon.UDlexPT()
 #################################################
 def parseOptions(arguments):
     # default options
-    output_file, input_file, match, trim, model = "", [], False, False, "S0000"
+    output_file, input_file, preserve, match, trim, model = "", [], False, False, False, "S0000"
     i = 1
     while i < len(arguments):
         if (arguments[i][0] == "-"):
@@ -60,6 +62,11 @@ def parseOptions(arguments):
                       "  salva as sentenças devidamente tokenizadas no arquivo 'sents.conllu''", \
                       sep="\n")
                 return None
+            # opção de correção (preserve) para itens a) b) i) ii)
+            elif ((arguments[i][1] == "p") and (len(arguments[i])==2)) or \
+                 (arguments[i] == "-preserve"):
+                preserve = True
+                i += 1
             # opção de correção (matching) de pontuações pareadas
             elif ((arguments[i][1] == "m") and (len(arguments[i])==2)) or \
                  (arguments[i] == "-match"):
@@ -96,7 +103,7 @@ def parseOptions(arguments):
             else:
                 print("O arquivo {} não foi encontrado, por favor execute novamente".format(arguments[i]))
                 return None
-    return [output_file, input_file, match, trim, model]
+    return [output_file, input_file, preserve, match, trim, model]
 
 #############################################################################
 #  Increment a name index
@@ -177,7 +184,41 @@ def trimIt(s):
     return ans
 
 #############################################################################
-#  Clear matching punctuations - punctIt (step 2)
+#  Tag the itemize prompts and double paragraph with //*||*\\ or //*|(|*\\ - tagIt (step 2)
+#############################################################################
+def tagIt(s):
+    romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", \
+              "xi", "xii", "xiii", "xiv", "xv", "xvi", "xvii", "xviii", \
+              "xix", "xx", "xxi", "xxii", "xxiii", "xxiv", "xxvi", "xxvii", \
+              "xxviii", "xxix", "xxx", "xxxi", "xxxii", "xxxiii", "xxxiv", "xxxv"]
+                # limited up to 35
+    letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", \
+               "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
+                # limited to single letters
+    itemizePrompts = romans+letters
+    # go over the sent string looking for itemize prompt patern
+    ans = ""
+    bits = s.split(" ")
+    for i in range(len(bits)):
+        if (bits[i][-1] == ")"):
+            if (bits[i][0] == "("):
+                if (bits[i][1:-1] in itemizePrompts):
+                    ans += "//*||*\\\\"+bits[i]+"//*||*\\\\ "
+                else:
+                    ans += bits[i]+" "
+            else:
+                if (bits[i][0:-1] in itemizePrompts):
+                    ans += "//*|(|*\\\\"+bits[i]+"//*||*\\\\ "
+                else:
+                    ans += bits[i]+" "
+        elif (bits[i] == "§§"):
+            ans += "//*||*\\\\"+bits[i]+"//*||*\\\\ "
+        else:
+            ans += bits[i]+" "
+    return ans
+
+#############################################################################
+#  Clear matching punctuations - punctIt (step 3)
 #############################################################################
 def punctIt(s):
     def notAlpha(sent):
@@ -203,9 +244,9 @@ def punctIt(s):
         ((openBrackets == 1 ) and (closBrackets == 1 ) and (s[0] == "[") and (s[-1] == "]")) or \
         ((openCurBrace == 1 ) and (closCurBrace == 1 ) and (s[0] == "{") and (s[-1] == "}")) or \
         ((openAligator == 1 ) and (closAligator == 1 ) and (s[0] == "<") and (s[-1] == ">")):
-        S = s[1:-1]
+        S = s[1:-1].strip()
     else:
-        S = s
+        S = s.strip()
     if (doubleQuotes % 2 != 0):
         S = S.replace('"', '')
     if (singleQuotes % 2 != 0):
@@ -232,7 +273,7 @@ def punctIt(s):
     return S.replace("  ", " ").replace("  ", " ")
 
 #############################################################################
-#  Decide if ambiguous tokens are contracted or not - desambIt (within step 3)
+#  Decide if ambiguous tokens are contracted or not - desambIt (within step 4)
 #############################################################################
 def desambIt(token, bits, i, lastField, s, SID, tokens):
     def stripWord(w):
@@ -470,12 +511,12 @@ def desambIt(token, bits, i, lastField, s, SID, tokens):
                 tokens.append(["os","_"])
 
 #############################################################################
-#  Tokenizing - tokenizeIt (step 3)
+#  Tokenizing - tokenizeIt (step 4)
 #############################################################################
 def tokenizeIt(s, SID, outfile):
     removable = ["'", '"', "(", ")", "[", "]", "{", "}", "<", ">", \
                  "!", "?", ",", ";", ":", "=", "+", "*", "★", "|", "/", "\\", \
-                 "&", "^", "_", "`", "'", "~", "%"]
+                 "&", "^", "_", "`", "'", "~", "%", "§"]
     ignored   = ["@", "#"]
     digits  = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
     contracts = {"à":["a","a"],
@@ -571,6 +612,8 @@ def tokenizeIt(s, SID, outfile):
     ambigous = ["nos", "consigo", "pra", "pela", "pelas", "pelo", "pelos"]
 #    ambigous = ["nos", "consigo", "pra", "pelo", "pelos"]
     enclisis = ['me', 'te', 'se', 'lhe', 'o', 'a', 'nos', 'vos', 'lhes', 'os', 'as', 'lo', 'la', 'los', 'las']
+    doubleEnclisis = ["mo", "to", "lho", "lhos", "ma", "ta", "lha", "lhas", "mos", "tos"]
+    doubleEnclisisTri = ["no-lo", "vo-lo", "no-la", "vo-la", "no-los", "vo-los", "no-las", "vo-las"]
     terminations = ["ia", "ias", "as", "iamos", "ieis", "iam", "ei", "as", "a", "emos", "eis", "ão", "á"]
     abbrev = []
     infile = open("abbrev.txt", "r")
@@ -583,148 +626,219 @@ def tokenizeIt(s, SID, outfile):
             if (chunk == a):
                 abbr = True
                 break
-            else:
-                lasts = -len(a)
-                if (chunk[lasts:] == a) and (not chunk[lasts-1].isalpha()):
-                    abbr = True
-                    break
+            #else:
+            #    lasts = -len(a)
+            #    if (chunk[lasts:] == a) and (not chunk[lasts-1].isalpha()):
+            #        abbr = True
+            #        break
         return abbr
-    if (SID[-2:] == "80"):
-        xxxx = 0
     tokens = []
     bits = s.split(" ")
     k = 0
     for b in bits:
-        # deal with the pre (before) middle
-        pre = []
-        changed = True
-        while (changed) and (len(b) > 1):
-            changed = False
-            if (b[0] in removable) or ((b[0] == "$") and (b[1] in digits)) or ((b[0] == "-") and (b[1] not in digits)):
-                pre.append(b[0])
-                b = b[1:]
-                changed = True
-        # deal with the pos (after) middle
-        tmp = []
-        changed = True
-        while (changed) and (len(b) > 1):
-            if (isAbbrev(b, abbrev)):
-                break
-            changed = False
-            if (b[-1] in removable+["-", "."]):
-                tmp.append(b[-1])
-                b = b[:-1]
-                changed = True
-        pos = []
-        reticent = ""
-        for i in range(len(tmp)-1, -1, -1):
-            if (tmp[i] == "."):
-                if (reticent == ""):
-                    reticent = "."
-                elif (reticent == "."):
-                    reticent = ".."
-                elif (reticent == ".."):
-                    pos.append("...")
-                    reticent = ""
-            else:
-                if (reticent != ""):
-                    pos.append(reticent)
-                    reticent = ""
-                pos.append(tmp[i])
-        if (reticent != ""):
-            pos.append(reticent)
-        # deal with the middle
-        buf = b.split("-")
-        if (len(buf) == 1):
-            parts = pre+[b]+pos
-        # enclisis
-        elif (len(buf) == 2) and (buf[1] in enclisis):
-            if (buf[0][-1] == "á"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"ar", buf[1]]+pos
-            elif (buf[0][-1] == "ê"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"er", buf[1]]+pos
-            elif (buf[0][-1] == "í"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"ir", buf[1]]+pos
-            elif (buf[0][-1] == "ô"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"or", buf[1]]+pos
-            else:
-                parts = pre+["*^*"+b, buf[0], buf[1]]+pos
-        # mesoclisis - type I (e.g. dar-lo-ia)
-        elif (len(buf) == 3) and (buf[1] in enclisis) \
-            and (buf[0][-1] == "r") and (buf[2] in terminations):
-            parts = pre+["*^*"+b, buf[0]+buf[2], buf[1]]+pos
-        # mesoclisis - type II (e.g. dá-lo-ia)
-        elif (len(buf) == 3) and (buf[1] in enclisis) \
-            and (buf[0][-1] in ["á", "ê", "í", "ô"]) and (buf[2] in terminations):
-            if (buf[0][-1] == "á"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"ar"+buf[2], buf[1]]+pos
-            elif (buf[0][-1] == "ê"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"er"+buf[2], buf[1]]+pos
-            elif (buf[0][-1] == "í"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"ir"+buf[2], buf[1]]+pos
-            elif (buf[0][-1] == "ô"):
-                parts = pre+["*^*"+b, buf[0][:-1]+"or"+buf[2], buf[1]]+pos
+        pretagged = False
+        if (len(b) > 16):
+            if (b[:8] == "//*||*\\\\") or (b[:9] == "//*|(|*\\\\"):
+                pretagged = True
+        if (pretagged):
+            # keep the bit as token and clean the tags //*||*\\ before and after
+            tokens.append([b.replace("//*||*\\\\", "").replace("//*||*\\\\", "").replace("//*|(|*\\\\", ""), "_"])
         else:
-            parts = pre+[b]+pos
-        # transform parts into tokens to be added
-        i = 0
-        while (i < len(parts)):
-            if (i == len(parts)-1):
-                lastField = "_"
-            else:
-                lastField = "SpaceAfter=No"
-            if (parts[i][:3] == "*^*"):
-                if (i+3 == len(parts)):
-                    tokens.append([parts[i][3:], "c_"])
+            # deal with the pre (before) middle
+            pre = []
+            changed = True
+            while (changed) and (len(b) > 1):
+                changed = False
+                if (b[0] in removable) or ((b[0] == "$") and (b[1] in digits)) or ((b[0] == "-") and (b[1] not in digits)):
+                    pre.append(b[0])
+                    b = b[1:]
+                    changed = True
+            # deal with the pos (after) middle
+            tmp = []
+            changed = True
+            while (changed) and (len(b) > 1):
+                if (isAbbrev(b, abbrev)):
+                    break
+                changed = False
+                if (b[-1] in removable+["-", "."]):
+                    tmp.append(b[-1])
+                    b = b[:-1]
+                    changed = True
+            pos = []
+            reticent = ""
+            for i in range(len(tmp)-1, -1, -1):
+                if (tmp[i] == "."):
+                    if (reticent == ""):
+                        reticent = "."
+                    elif (reticent == "."):
+                        reticent = ".."
+                    elif (reticent == ".."):
+                        pos.append("...")
+                        reticent = ""
                 else:
-                    tokens.append([parts[i][3:], "cSpaceAfter=No"])
-                i += 1
-                tokens.append([parts[i], "_"])
-                i += 1
-                tokens.append([parts[i], "_"])
-            elif (parts[i] not in ambigous):
-                ans = contracts.get(parts[i].lower())
-                if (ans == None):
-                    tokens.append([parts[i], lastField])
-                else:
-                    tokens.append([parts[i], "c"+lastField])
-                    if (parts[i].isupper()):
-                        tokens.append([ans[0].upper(),"_"])
-                        tokens.append([ans[1].upper(),"_"])
-                    elif (parts[i][0].isupper()):
-                        tokens.append([ans[0][0].upper()+ans[0][1:],"_"])
-                        tokens.append([ans[1],"_"])
+                    if (reticent != ""):
+                        pos.append(reticent)
+                        reticent = ""
+                    pos.append(tmp[i])
+            if (reticent != ""):
+                pos.append(reticent)
+            # deal with the middle
+            buf = b.split("-")
+            if (len(buf) == 1):
+                parts = pre+[b]+pos
+            # enclisis (types I - infinitive e.g. cumprí-lo and type II - sonore e.g. satisfê-lo)
+            elif (len(buf) == 2) and (buf[1] in enclisis):
+                if (buf[0][-1] == "á"):
+                    if (lex.pexists(buf[0][:-1]+"ar", "VERB")):
+                        parts = pre+["*^*"+b, buf[0][:-1]+"ar", buf[1]]+pos
                     else:
-                        tokens.append([ans[0],"_"])
-                        tokens.append([ans[1],"_"])
+                        if (lex.pexists(buf[0][:-1]+"as", "VERB")):
+                            parts = pre+["*^*"+b, buf[0][:-1]+"as", buf[1]]+pos
+                        else:
+                            parts = pre+["*^*"+b, buf[0][:-1]+"az", buf[1]]+pos
+                elif (buf[0][-1] == "ê"):
+                    if (lex.pexists(buf[0][:-1]+"er", "VERB")):
+                        parts = pre+["*^*"+b, buf[0][:-1]+"er", buf[1]]+pos
+                    else:
+                        if (lex.pexists(buf[0][:-1]+"es", "VERB")):
+                            parts = pre+["*^*"+b, buf[0][:-1]+"es", buf[1]]+pos
+                        else:
+                            parts = pre+["*^*"+b, buf[0][:-1]+"ez", buf[1]]+pos
+                elif (buf[0][-1] == "í"):
+                    if (lex.pexists(buf[0][:-1]+"ir", "VERB")):
+                        parts = pre+["*^*"+b, buf[0][:-1]+"ir", buf[1]]+pos
+                    else:
+                        if (lex.pexists(buf[0][:-1]+"is", "VERB")):
+                            parts = pre+["*^*"+b, buf[0][:-1]+"is", buf[1]]+pos
+                        else:
+                            parts = pre+["*^*"+b, buf[0][:-1]+"iz", buf[1]]+pos
+                elif (buf[0][-1] == "ô"):
+                    if (lex.pexists(buf[0][:-1]+"or", "VERB")):
+                        parts = pre+["*^*"+b, buf[0][:-1]+"or", buf[1]]+pos
+                    else:
+                        if (lex.pexists(buf[0][:-1]+"os", "VERB")):
+                            parts = pre+["*^*"+b, buf[0][:-1]+"os", buf[1]]+pos
+                        else:
+                            parts = pre+["*^*"+b, buf[0][:-1]+"oz", buf[1]]+pos
+                else:
+                    parts = pre+["*^*"+b, buf[0], buf[1]]+pos
+            # double enclisis - type II (e.g. disse-lhos, dei-ta)
+            elif (len(buf) == 2) and (buf[1] in doubleEnclisis):
+                if (buf[1][-1] == "a"):
+                    parts = pre+["*^^*"+b, buf[0], buf[1][:-1]+"e", buf[1][-1]]+pos
+                elif (buf[1][-1] == "o"):
+                    parts = pre+["*^^*"+b, buf[0], buf[1][:-1]+"e", buf[1][-1]]+pos
+                elif (buf[1][-2:] == "as"):
+                    parts = pre+["*^^*"+b, buf[0], buf[1][:-2]+"e", buf[1][-2:]]+pos
+                elif (buf[1][-2:] == "os"):
+                    parts = pre+["*^^*"+b, buf[0], buf[1][:-2]+"e", buf[1][-2:]]+pos
+                else:
+                    parts = pre+["*^*"+b, buf[0], buf[1]]+pos
+            # double enclisis - type I (e.g. dá-se-lhes)
+            elif (len(buf) == 3) and (buf[1] in enclisis) and (buf[2] in enclisis):
+                if (buf[0][-1] == "á"):
+                    parts = pre+["*^^*"+b, buf[0][:-1]+"ar", buf[1], buf[2]]+pos
+                elif (buf[0][-1] == "ê"):
+                    parts = pre+["*^^*"+b, buf[0][:-1]+"er", buf[1], buf[2]]+pos
+                elif (buf[0][-1] == "í"):
+                    parts = pre+["*^^*"+b, buf[0][:-1]+"ir", buf[1], buf[2]]+pos
+                elif (buf[0][-1] == "ô"):
+                    parts = pre+["*^^*"+b, buf[0][:-1]+"or", buf[1], buf[2]]+pos
+                else:
+                    parts = pre+["*^^*"+b, buf[0], buf[1], buf[2]]+pos
+            # mesoclisis - type I (e.g. dar-lo-ia)
+            elif (len(buf) == 3) and (buf[1] in enclisis) \
+                and (buf[0][-1] == "r") and (buf[2] in terminations):
+                parts = pre+["*^*"+b, buf[0]+buf[2], buf[1]]+pos
+            # mesoclisis - type II (e.g. dá-lo-ia)
+            elif (len(buf) == 3) and (buf[1] in enclisis) \
+                and (buf[0][-1] in ["á", "ê", "í", "ô"]) and (buf[2] in terminations):
+                if (buf[0][-1] == "á"):
+                    parts = pre+["*^*"+b, buf[0][:-1]+"ar"+buf[2], buf[1]]+pos
+                elif (buf[0][-1] == "ê"):
+                    parts = pre+["*^*"+b, buf[0][:-1]+"er"+buf[2], buf[1]]+pos
+                elif (buf[0][-1] == "í"):
+                    parts = pre+["*^*"+b, buf[0][:-1]+"ir"+buf[2], buf[1]]+pos
+                elif (buf[0][-1] == "ô"):
+                    parts = pre+["*^*"+b, buf[0][:-1]+"or"+buf[2], buf[1]]+pos
             else:
-                desambIt(parts[i], bits, k, lastField, s, SID, tokens)
-            i += 1
+                parts = pre+[b]+pos
+            # transform parts into tokens to be added
+            i = 0
+            while (i < len(parts)):
+                if (i == len(parts)-1):
+                    lastField = "_"
+                else:
+                    lastField = "SpaceAfter=No"
+                if (parts[i][:3] == "*^*"):
+                    if (i+3 == len(parts)):
+                        tokens.append([parts[i][3:], "c_"])
+                    else:
+                        tokens.append([parts[i][3:], "cSpaceAfter=No"])
+                    i += 1
+                    tokens.append([parts[i], "_"])
+                    i += 1
+                    tokens.append([parts[i], "_"])
+                elif (parts[i][:4] == "*^^*"):
+                    if (i+4 == len(parts)):
+                        tokens.append([parts[i][4:], "C_"])
+                    else:
+                        tokens.append([parts[i][4:], "CSpaceAfter=No"])
+                    i += 1
+                    tokens.append([parts[i], "_"])
+                    i += 1
+                    tokens.append([parts[i], "_"])
+                    i += 1
+                    tokens.append([parts[i], "_"])
+                elif (parts[i] not in ambigous):
+                    ans = contracts.get(parts[i].lower())
+                    if (ans == None):
+                        tokens.append([parts[i], lastField])
+                    else:
+                        tokens.append([parts[i], "c"+lastField])
+                        if (parts[i].isupper()):
+                            tokens.append([ans[0].upper(),"_"])
+                            tokens.append([ans[1].upper(),"_"])
+                        elif (parts[i][0].isupper()):
+                            tokens.append([ans[0][0].upper()+ans[0][1:],"_"])
+                            tokens.append([ans[1],"_"])
+                        else:
+                            tokens.append([ans[0],"_"])
+                            tokens.append([ans[1],"_"])
+                else:
+                    desambIt(parts[i], bits, k, lastField, s, SID, tokens)
+                i += 1
         k += 1
     # output the sentence with all the tokens
     print("# sent_id =", SID, file=outfile)
-    print("# text =", s, file=outfile)
+    print("# text =", s.replace("//*||*\\\\", "").replace("//*||*\\\\", "").replace("//*|(|*\\\\", ""), file=outfile)
     ## printout tokens
     toks = 0
     for i in range(len(tokens)):
-        if (tokens[i][1][0] != "c"):
-            toks += 1
-            print(str(toks), tokens[i][0], "_", "_", "_", "_", "_", "_", "_", tokens[i][1], sep="\t", file=outfile)
-        else:
-            # contracted word
+        if (tokens[i][1][0] == "c"):
+            # contracted word (two parts)
             print(str(toks+1)+"-"+str(toks+2), tokens[i][0], "_", "_", "_", "_", "_", "_", "_", tokens[i][1][1:], sep="\t", file=outfile)
+        elif (tokens[i][1][0] == "C"):
+            # contracted word (three parts)
+            print(str(toks+1)+"-"+str(toks+3), tokens[i][0], "_", "_", "_", "_", "_", "_", "_", tokens[i][1][1:], sep="\t", file=outfile)
+        elif (tokens[i][0].strip() != ""):
+            # non contracted word
+            toks += 1
+            print(str(toks), tokens[i][0].strip(), "_", "_", "_", "_", "_", "_", "_", tokens[i][1], sep="\t", file=outfile)
     print(file=outfile)
     return(toks)
 
 #################################################
 ### Deal with a sentence, clean it, if required, then tokenize it
 #################################################
-def dealWith(outfile, sent, SID, match, trim):
-    if (trim):
+def dealWith(outfile, sent, SID, preserve, match, trim):
+    if (trim):       # step 1
         sent = trimIt(sent)
-    if (match):
+    if (preserve):   # step 2
+        sent = tagIt(sent)
+    if (match):      # step 3
         sent = punctIt(sent)
-    if (sent != ""):
+    if (sent != ""): # step 4
         return 1, tokenizeIt(sent, SID, outfile)
     else:
         return 0, 0
@@ -734,7 +848,8 @@ def dealWith(outfile, sent, SID, match, trim):
 #################################################
 def portTok():
     if (len(sys.argv) == 1):
-        arguments = ["sents.conllu", "sents.txt", True, True, "S0000"]
+        #arguments = ["/Users/pf64/Desktop/alienista/alienista_empty.conllu", "/Users/pf64/Desktop/alienista/alienista.txt", False, True, False, "ATENISTA_SENT0000"]
+        arguments = ["sents.conllu", "sents.txt", True, True, True, "S0000"]
         print("Assumindo default: 'sents.conllu' como arquivo de saída, 'sents.txt' como arquivo de entrada, correções, remoções e S0000 como sid.")
     else:
         arguments = parseOptions(sys.argv)
@@ -746,13 +861,13 @@ def portTok():
             print("Arquivo de entrada inválido - por favor corrija e tente novamente")
         else:
             outfile = open(arguments[0], "w")
-            print("# newdoc id = {}\n# newpar".format(arguments[0]), file=outfile)
+            #print("# newdoc id = {}\n# newpar".format(arguments[0]), file=outfile)
             infile = open(arguments[1], "r")
-            SID = arguments[4]
+            SID = arguments[5]
             sTOTAL, tTOTAL = 0, 0
             for line in infile:
                 SID = nextName(SID)
-                s, t = dealWith(outfile, line[:-1], SID, arguments[2], arguments[3])
+                s, t = dealWith(outfile, line[:-1], SID, arguments[2], arguments[3], arguments[4])
                 if (s == 1):
                     sTOTAL += 1
                     tTOTAL += t
